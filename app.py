@@ -3,63 +3,6 @@ import pymssql
 
 st.set_page_config(page_title="TriSys", page_icon="🏢", layout="centered")
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-/* 隱藏 Streamlit 預設 header/footer */
-#MainMenu, footer, header { visibility: hidden; }
-[data-testid="stAppViewContainer"] { background: #f0f2f5; }
-[data-testid="stMain"] > div { padding-top: 1rem; }
-
-/* 表格外框 */
-.tbl-wrap {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-/* 表頭 */
-.tbl-head {
-  display: flex;
-  background: #1677ff;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 0;
-}
-.tbl-head span { padding: 0 12px; flex: var(--flex, 1); }
-/* 表格列 */
-.tbl-row {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 6px 0;
-  background: #fff;
-}
-.tbl-row:last-child { border-bottom: none; }
-.tbl-row:hover { background: #fafafa; }
-.tbl-cell { padding: 4px 12px; flex: var(--flex, 1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tbl-empty { text-align: center; color: #aaa; padding: 24px; font-size: 13px; }
-
-/* 頁面標題列 */
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.page-title { flex: 1; font-size: 17px; font-weight: 700; color: #333; }
-
-/* 按鈕微調 */
-[data-testid="stButton"] button {
-  font-size: 12px !important;
-  padding: 4px 10px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ── DB ────────────────────────────────────────────────────────────────────────
 def get_conn():
     return pymssql.connect(
@@ -98,7 +41,7 @@ def cust_dialog(row=None):
 
 @st.dialog("確認刪除")
 def cust_del_dialog(code):
-    st.warning(f"確定刪除客戶「{code}」？此操作無法復原。")
+    st.warning(f"確定刪除客戶「{code}」？")
     c1, c2 = st.columns(2)
     if c1.button("取消", use_container_width=True): st.rerun()
     if c2.button("確定刪除", use_container_width=True, type="primary"):
@@ -129,7 +72,7 @@ def fact_dialog(row=None):
 
 @st.dialog("確認刪除")
 def fact_del_dialog(code):
-    st.warning(f"確定刪除廠商「{code}」？此操作無法復原。")
+    st.warning(f"確定刪除廠商「{code}」？")
     c1, c2 = st.columns(2)
     if c1.button("取消", use_container_width=True): st.rerun()
     if c2.button("確定刪除", use_container_width=True, type="primary"):
@@ -146,13 +89,10 @@ def item_dialog(row=None, fact_options=None):
     name  = st.text_input("商品名稱", value=row["item_name"] if is_edit else "")
     fact_codes  = [f[0] for f in (fact_options or [])]
     fact_labels = [f"{f[0]} - {f[1]}" for f in (fact_options or [])]
-    default_idx = fact_codes.index(row["fact_code"]) if is_edit and row.get("fact_code") in fact_codes else 0
-    if fact_labels:
-        sel_label = st.selectbox("主供應商", options=["-- 請選擇 --"] + fact_labels,
-                                 index=default_idx + 1 if is_edit else 0)
-        fact_code = fact_codes[fact_labels.index(sel_label)] if sel_label != "-- 請選擇 --" else ""
-    else:
-        fact_code = st.text_input("主供應商代碼", value=row.get("fact_code", "") if is_edit else "")
+    opts = ["-- 請選擇 --"] + fact_labels
+    default_idx = (fact_codes.index(row["fact_code"]) + 1) if is_edit and row.get("fact_code") in fact_codes else 0
+    sel = st.selectbox("主供應商", options=opts, index=default_idx)
+    fact_code = fact_codes[fact_labels.index(sel)] if sel != "-- 請選擇 --" else ""
     c1, c2 = st.columns(2)
     if c1.button("取消", use_container_width=True): st.rerun()
     if c2.button("儲存", use_container_width=True, type="primary"):
@@ -168,7 +108,7 @@ def item_dialog(row=None, fact_options=None):
 
 @st.dialog("確認刪除")
 def item_del_dialog(code):
-    st.warning(f"確定刪除商品「{code}」？此操作無法復原。")
+    st.warning(f"確定刪除商品「{code}」？")
     c1, c2 = st.columns(2)
     if c1.button("取消", use_container_width=True): st.rerun()
     if c2.button("確定刪除", use_container_width=True, type="primary"):
@@ -200,7 +140,7 @@ def user_dialog(row=None):
 
 @st.dialog("確認刪除")
 def user_del_dialog(uid):
-    st.warning(f"確定刪除用戶「{uid}」？此操作無法復原。")
+    st.warning(f"確定刪除用戶「{uid}」？")
     c1, c2 = st.columns(2)
     if c1.button("取消", use_container_width=True): st.rerun()
     if c2.button("確定刪除", use_container_width=True, type="primary"):
@@ -210,99 +150,86 @@ def user_del_dialog(uid):
             conn.commit(); conn.close(); st.rerun()
         except Exception as e: st.error(str(e))
 
-# ── Dialog trigger helpers ────────────────────────────────────────────────────
+# ── Dialog trigger ────────────────────────────────────────────────────────────
 def _trigger(ns):
-    """Check session state and open the appropriate dialog."""
-    edit = st.session_state.pop(f"{ns}_edit", None)
-    dele = st.session_state.pop(f"{ns}_del",  None)
+    edit  = st.session_state.pop(f"{ns}_edit",  None)
+    dele  = st.session_state.pop(f"{ns}_del",   None)
     facts = st.session_state.pop(f"{ns}_facts", None)
     if edit is not None:
-        if ns == "cust": cust_dialog(edit if edit != "__new__" else None)
-        elif ns == "fact": fact_dialog(edit if edit != "__new__" else None)
-        elif ns == "item": item_dialog(edit if edit != "__new__" else None, facts)
-        elif ns == "user": user_dialog(edit if edit != "__new__" else None)
+        row = None if edit == "__new__" else edit
+        if ns == "cust": cust_dialog(row)
+        elif ns == "fact": fact_dialog(row)
+        elif ns == "item": item_dialog(row, facts)
+        elif ns == "user": user_dialog(row)
     if dele is not None:
         if ns == "cust": cust_del_dialog(dele)
         elif ns == "fact": fact_del_dialog(dele)
         elif ns == "item": item_del_dialog(dele)
         elif ns == "user": user_del_dialog(dele)
 
-# ── Shared table renderer ─────────────────────────────────────────────────────
+# ── Table renderer ────────────────────────────────────────────────────────────
+HDR = "background:#1677ff;color:#fff;padding:8px 6px;font-size:13px;font-weight:600;margin:0"
+CEL = "padding:8px 6px;font-size:13px"
+
 def render_table(headers, rows, key_fn, cell_fn, ns):
-    """
-    headers : list of (label, flex_width)   e.g. [("客戶代碼",2),("客戶名稱",3),("備註",3)]
-    rows    : list of dict
-    key_fn  : row -> unique key string
-    cell_fn : row -> list of display strings (same length as headers)
-    ns      : namespace for session state keys
-    """
-    # Build header HTML
-    spans = "".join(
-        f'<span style="flex:{w}">{lbl}</span>'
-        for lbl, w in headers
-    )
-    spans += '<span style="flex:2;text-align:center">操作</span>'
-    st.markdown(
-        f'<div class="tbl-wrap"><div class="tbl-head">{spans}</div></div>',
-        unsafe_allow_html=True,
-    )
+    ratios = [w for _, w in headers] + [1, 1]
+
+    # ── 表頭（藍底白字）
+    hcols = st.columns(ratios)
+    for col, (lbl, _) in zip(hcols[:-2], headers):
+        col.markdown(f'<div style="{HDR}">{lbl}</div>', unsafe_allow_html=True)
+    hcols[-2].markdown(f'<div style="{HDR};text-align:center">修改</div>', unsafe_allow_html=True)
+    hcols[-1].markdown(f'<div style="{HDR};text-align:center">刪除</div>', unsafe_allow_html=True)
 
     if not rows:
-        st.markdown('<div class="tbl-wrap"><div class="tbl-empty">尚無資料</div></div>', unsafe_allow_html=True)
+        st.info("尚無資料")
         return
 
-    total_flex = sum(w for _, w in headers) + 2
-    col_ratios = [w for _, w in headers] + [1, 1]
-
-    st.markdown('<div class="tbl-wrap">', unsafe_allow_html=True)
+    # ── 資料列
     for r in rows:
         cells = cell_fn(r)
         key   = key_fn(r)
-        cols  = st.columns(col_ratios)
-        for i, (text, (_, w)) in enumerate(zip(cells, headers)):
-            cols[i].markdown(
-                f'<div class="tbl-cell" style="flex:{w}">{text}</div>',
-                unsafe_allow_html=True,
-            )
-        if cols[-2].button("修改", key=f"e_{ns}_{key}"):
+        dcols = st.columns(ratios)
+        for col, text in zip(dcols[:-2], cells):
+            col.markdown(f'<div style="{CEL}">{text}</div>', unsafe_allow_html=True)
+        if dcols[-2].button("修改", key=f"e_{ns}_{key}"):
             st.session_state[f"{ns}_edit"] = r
             st.rerun()
-        if cols[-1].button("刪除", key=f"d_{ns}_{key}"):
+        if dcols[-1].button("刪除", key=f"d_{ns}_{key}"):
             st.session_state[f"{ns}_del"] = key
             st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.divider()
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
 def page_login():
-    st.markdown("<h1 style='text-align:center;margin-top:60px;color:#1677ff'>TriSys</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;color:#999;margin-bottom:32px'>資料維護系統</p>", unsafe_allow_html=True)
     _, col, _ = st.columns([1, 1.2, 1])
     with col:
-        with st.container(border=True):
-            userid = st.text_input("帳號", placeholder="請輸入帳號")
-            pwd    = st.text_input("密碼", type="password", placeholder="請輸入密碼")
-            if st.button("登入", use_container_width=True, type="primary"):
-                if not userid or not pwd:
-                    st.error("請輸入帳號與密碼")
-                else:
-                    try:
-                        conn = get_conn()
-                        cur  = conn.cursor(as_dict=True)
-                        cur.execute("SELECT userid,username FROM [user] WHERE userid=%s AND pwd=%s", (userid, pwd))
-                        row = cur.fetchone(); conn.close()
-                        if row:
-                            st.session_state.logged_in = True
-                            st.session_state.user = row
-                            st.session_state.page = "main"
-                            st.rerun()
-                        else:
-                            st.error("帳號或密碼錯誤")
-                    except Exception as e:
-                        st.error(f"連線錯誤：{e}")
+        st.markdown("<h2 style='text-align:center;color:#1677ff'>TriSys</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center;color:#999'>資料維護系統</p>", unsafe_allow_html=True)
+        userid = st.text_input("帳號", placeholder="請輸入帳號")
+        pwd    = st.text_input("密碼", type="password", placeholder="請輸入密碼")
+        if st.button("登入", use_container_width=True, type="primary"):
+            if not userid or not pwd:
+                st.error("請輸入帳號與密碼")
+            else:
+                try:
+                    conn = get_conn()
+                    cur  = conn.cursor(as_dict=True)
+                    cur.execute("SELECT userid,username FROM [user] WHERE userid=%s AND pwd=%s", (userid, pwd))
+                    row = cur.fetchone(); conn.close()
+                    if row:
+                        st.session_state.logged_in = True
+                        st.session_state.user = row
+                        st.session_state.page = "main"
+                        st.rerun()
+                    else:
+                        st.error("帳號或密碼錯誤")
+                except Exception as e:
+                    st.error(f"連線錯誤：{e}")
 
 def page_main():
     c1, c2 = st.columns([9, 1])
-    c1.markdown(f"### TriSys &nbsp;<span style='font-size:14px;color:#888;font-weight:400'>歡迎，{st.session_state.user.get('username') or st.session_state.user.get('userid')}</span>", unsafe_allow_html=True)
+    c1.markdown(f"### TriSys　<span style='font-size:14px;color:#888;font-weight:400'>歡迎，{st.session_state.user.get('username') or st.session_state.user.get('userid')}</span>", unsafe_allow_html=True)
     if c2.button("登出"):
         st.session_state.logged_in = False
         st.session_state.user = None
@@ -310,16 +237,14 @@ def page_main():
         st.rerun()
     st.divider()
     cols = st.columns(2)
-    menus = [("🏢\n\n客戶資料", "cust"), ("🏭\n\n廠商資料", "fact"),
-             ("📦\n\n商品資料", "item"), ("👤\n\n用戶資料", "user")]
-    for i, (label, pg) in enumerate(menus):
+    for i, (label, pg) in enumerate([("🏢  客戶資料", "cust"), ("🏭  廠商資料", "fact"),
+                                      ("📦  商品資料", "item"), ("👤  用戶資料", "user")]):
         with cols[i % 2]:
-            with st.container(border=True):
-                if st.button(label, use_container_width=True, key=f"menu_{pg}"):
-                    st.session_state.page = pg; st.rerun()
+            if st.button(label, use_container_width=True, key=f"menu_{pg}"):
+                st.session_state.page = pg; st.rerun()
 
 def _page_header(title, ns, facts=None):
-    c1, c2, c3 = st.columns([1, 6, 1.5])
+    c1, c2, c3 = st.columns([1, 5, 1.5])
     if c1.button("← 返回", key=f"back_{ns}"):
         st.session_state.page = "main"; st.rerun()
     c2.markdown(f"**{title}**")
