@@ -18,6 +18,9 @@ client/build/
 *.log
 npm-debug.log*
 
+# Streamlit secrets (sensitive)
+.streamlit/secrets.toml
+
 # OS
 .DS_Store
 Thumbs.db
