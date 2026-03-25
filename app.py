@@ -174,8 +174,7 @@ def page_cust():
 
     if rows:
         import pandas as pd
-        df = pd.DataFrame(rows, columns=["客戶代碼","客戶名稱","備註"])
-        df.columns = ["cust_code","cust_name","remark"]
+        df = pd.DataFrame(rows)
         st.dataframe(df.rename(columns={"cust_code":"客戶代碼","cust_name":"客戶名稱","remark":"備註"}), use_container_width=True, hide_index=True)
         codes = [r["cust_code"] for r in rows]
         sel = st.selectbox("選擇要操作的客戶代碼", options=[""] + codes)
