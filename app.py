@@ -90,7 +90,13 @@ def item_dialog(row=None, fact_options=None):
     fact_codes  = [f[0] for f in (fact_options or [])]
     fact_labels = [f"{f[0]} - {f[1]}" for f in (fact_options or [])]
     opts = ["-- 請選擇 --"] + fact_labels
-    default_idx = (fact_codes.index(row["fact_code"]) + 1) if is_edit and row.get("fact_code") in fact_codes else 0
+    # 修改時預選當前廠商；新增時預選第一個（同 React openAdd 行為）
+    if is_edit and row.get("fact_code") in fact_codes:
+        default_idx = fact_codes.index(row["fact_code"]) + 1
+    elif not is_edit and fact_codes:
+        default_idx = 1   # 預選第一個廠商
+    else:
+        default_idx = 0
     sel = st.selectbox("主供應商", options=opts, index=default_idx)
     fact_code = fact_codes[fact_labels.index(sel)] if sel != "-- 請選擇 --" else ""
     c1, c2 = st.columns(2)
@@ -171,7 +177,8 @@ def _trigger(ns):
 HDR = "background:#1677ff;color:#fff;padding:8px 6px;font-size:13px;font-weight:600;margin:0"
 CEL = "padding:8px 6px;font-size:13px"
 
-def render_table(headers, rows, key_fn, cell_fn, ns):
+def render_table(headers, rows, key_fn, cell_fn, ns, edit_extra=None):
+    """edit_extra: dict stored into session_state when edit button is clicked (e.g. facts for item)"""
     ratios = [w for _, w in headers] + [1, 1]
 
     # ── 表頭（藍底白字）
@@ -194,6 +201,9 @@ def render_table(headers, rows, key_fn, cell_fn, ns):
             col.markdown(f'<div style="{CEL}">{text}</div>', unsafe_allow_html=True)
         if dcols[-2].button("修改", key=f"e_{ns}_{key}"):
             st.session_state[f"{ns}_edit"] = r
+            if edit_extra:
+                for k, v in edit_extra.items():
+                    st.session_state[k] = v
             st.rerun()
         if dcols[-1].button("刪除", key=f"d_{ns}_{key}"):
             st.session_state[f"{ns}_del"] = key
@@ -301,6 +311,9 @@ def page_item():
         conn.close()
     except Exception as e:
         st.error(str(e)); return
+    # facts must be fetched before _trigger so dialog receives up-to-date list
+    if "item_edit" in st.session_state and "item_facts" not in st.session_state:
+        st.session_state["item_facts"] = facts
     _trigger("item")
     _page_header("商品資料維護", "item", facts=facts)
     render_table(
@@ -309,6 +322,7 @@ def page_item():
         key_fn=lambda r: r["item_code"],
         cell_fn=lambda r: [r["item_code"], r["item_name"], r.get("fact_name") or r.get("fact_code") or ""],
         ns="item",
+        edit_extra={"item_facts": facts},
     )
 
 def page_user():
